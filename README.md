@@ -272,6 +272,39 @@ Output:
 
 ![output tree](assets/tree.png)
 
+`Test source directory tetap`
+
+```bash id="out1"
+ls amba_files
+```
+
+Output:
+
+1.txt
+2.txt
+3.txt
+4.txt
+5.txt
+6.txt
+7.txt
+
+Hal ini menunjukkan bahwa file virtual `tujuan.txt` tidak benar-benar dibuat pada source directory.
+
+![output ls-amba](assets/ls%20amba.png)
+
+---
+
+`Test metadata virtual file`
+
+```bash id="out2"
+sudo stat mnt/tujuan.txt
+```
+
+Output menunjukkan bahwa `tujuan.txt` berhasil dikenali sebagai regular file virtual oleh filesystem FUSE.
+
+![output stat-tujuan](assets/stat.png)
+
+
 ## KENDALA
 
 Kendala utama terdapat pada environment WSL dan permission FUSE. Awalnya filesystem tidak dapat membaca source directory karena mountpoint dijalankan menggunakan root sehingga permission antara user dan root bercampur. Selain itu callback `readdir` sempat gagal membaca source directory akibat path relative yang tidak stabil pada WSL.
