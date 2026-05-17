@@ -13,7 +13,7 @@
 
 
 // ======================================
-// GANTI PATH SESUAI pwd LU
+// GANTI SESUAI PATH pwd LU
 // ======================================
 
 static const char *source_dir =
@@ -46,7 +46,7 @@ static int x_getattr(const char *path,
     {
         stbuf->st_mode = S_IFREG | 0444;
         stbuf->st_nlink = 1;
-        stbuf->st_size = 1024;
+        stbuf->st_size = 66;
         return 0;
     }
 
@@ -198,9 +198,17 @@ static int x_read(const char *path,
                 {
                     char temp[1024];
 
-                    strcpy(temp, found + 6);
+                    char *start = found + 6;
 
-                    // hapus newline
+                    // buang spasi depan
+                    while (*start == ' ')
+                    {
+                        start++;
+                    }
+
+                    strcpy(temp, start);
+
+                    // buang newline
                     temp[strcspn(temp, "\n")] = 0;
 
                     strcat(result, temp);
