@@ -630,27 +630,7 @@ File plaintext berhasil muncul pada mountpoint dan file encrypted berhasil dibua
 ./client
 ```
 
-Output:
-
-Connected to DB Server on port 9000
-
 ![output client](assets/client.png)
-
----
-
-`Test Command Database`
-
-```text
-HELP
-CREATE DATABASE testdb
-LIST DATABASE
-```
-
-Output:
-
-Client berhasil mengirim command ke server database.
-
-![output database](assets/database.png)
 
 ---
 
