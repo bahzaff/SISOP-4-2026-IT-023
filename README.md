@@ -290,7 +290,7 @@ Output:
 
 Hal ini menunjukkan bahwa file virtual `tujuan.txt` tidak benar-benar dibuat pada source directory.
 
-![output ls-amba](assets/ls%20amba.png)
+![output ls-amba](assets/lsamba.png)
 
 ---
 
