@@ -310,3 +310,373 @@ Output menunjukkan bahwa `tujuan.txt` berhasil dikenali sebagai regular file vir
 Kendala utama terdapat pada environment WSL dan permission FUSE. Awalnya filesystem tidak dapat membaca source directory karena mountpoint dijalankan menggunakan root sehingga permission antara user dan root bercampur. Selain itu callback `readdir` sempat gagal membaca source directory akibat path relative yang tidak stabil pada WSL.
 
 Masalah lain terjadi pada virtual file `tujuan.txt` dimana hasil penggabungan fragment koordinat masih mengandung spasi dan newline sehingga output tidak sesuai dengan indikator soal. Permasalahan diselesaikan dengan melakukan trimming leading space dan menghapus karakter newline sebelum fragment digabungkan.
+
+# SOAL 2
+
+## Database Service dengan FUSE dan Docker
+
+Program pada soal 2 dibuat menggunakan kombinasi socket programming, Docker container, dan FUSE filesystem. Sistem terdiri dari client-server database sederhana yang berjalan pada port `9000` serta filesystem terenkripsi menggunakan XOR encryption.
+
+Filesystem FUSE digunakan untuk melakukan enkripsi otomatis terhadap file yang disimpan pada `encrypted_storage`, sementara Docker digunakan untuk melakukan containerization terhadap database service.
+
+---
+
+## Poin-Poin Pengerjaan Soal
+
+`Poin 1 - Membuat filesystem terenkripsi menggunakan FUSE`
+
+Program `fuse.c` dibuat menggunakan library FUSE untuk membuat virtual filesystem pada mountpoint `fuse_mount`.
+
+Filesystem bekerja dengan cara:
+- membaca file terenkripsi dari `encrypted_storage`
+- melakukan decrypt saat file dibaca
+- melakukan encrypt saat file ditulis
+
+Program menggunakan XOR encryption sederhana dengan key `0x76`.
+
+```c
+void encrypt_decrypt(char *buffer, size_t size)
+{
+    for (size_t i = 0; i < size; i++)
+    {
+        buffer[i] ^= 0x76;
+    }
+}
+```
+
+---
+
+`Poin 2 - Menyembunyikan ekstensi .enc`
+
+File asli pada storage disimpan menggunakan ekstensi `.enc`, namun pada mountpoint ekstensi tersebut disembunyikan agar user melihat filesystem seperti filesystem normal.
+
+Pada callback `readdir`, program melakukan trimming `.enc`.
+
+```c
+if (len > 4 && strcmp(name + len - 4, ".enc") == 0)
+{
+    name[len - 4] = '\0';
+}
+```
+
+---
+
+`Poin 3 - Membaca file terenkripsi`
+
+Pada callback `read`, file `.enc` dibaca dari storage kemudian dilakukan proses decrypt sebelum dikirim ke user.
+
+```c
+res = pread(fd, buf, size, offset);
+
+if (res != -1)
+{
+    encrypt_decrypt(buf, res);
+}
+```
+
+---
+
+`Poin 4 - Menulis file terenkripsi`
+
+Pada callback `write`, data plaintext dari user terlebih dahulu dienkripsi sebelum ditulis ke storage.
+
+```c
+memcpy(temp, buf, size);
+
+encrypt_decrypt(temp, size);
+
+res = pwrite(fd, temp, size, offset);
+```
+
+---
+
+`Poin 5 - Membuat file encrypted otomatis`
+
+Pada callback `create`, setiap file yang dibuat pada mountpoint otomatis dibuat sebagai file `.enc` pada storage.
+
+```c
+fullpath(fpath, path);
+
+int fd = creat(fpath, mode);
+```
+
+---
+
+`Poin 6 - Docker Containerization`
+
+Database service dijalankan menggunakan Docker container agar server dapat berjalan secara isolated.
+
+Docker image dibuat menggunakan `Dockerfile`.
+
+```dockerfile
+FROM ubuntu:latest
+
+WORKDIR /app
+
+RUN apt update && \
+    apt install -y gcc fuse libfuse-dev
+
+COPY . .
+
+RUN chmod +x server
+
+EXPOSE 9000
+
+CMD ["./server"]
+```
+
+---
+
+`Poin 7 - Menjalankan Docker Container`
+
+Container database dijalankan menggunakan port forwarding pada port `9000`.
+
+```bash
+sudo docker run -d \
+--name db_app \
+-p 9000:9000 \
+-v $(pwd)/fuse_mount:/app/db \
+soal-2-modul-4-sisop
+```
+
+Keterangan:
+- `-d` : menjalankan container pada background
+- `-p 9000:9000` : expose port database service
+- `-v` : bind mount filesystem FUSE ke dalam container
+
+---
+
+`Poin 8 - Implementasi TCP Client`
+
+Program `client.c` dibuat menggunakan socket TCP agar user dapat mengirim command database ke server.
+
+Client melakukan:
+- connect ke localhost port `9000`
+- mengirim command user
+- menerima response server
+
+```c
+sock = socket(AF_INET, SOCK_STREAM, 0);
+
+connect(sock,
+        (struct sockaddr *)&server_addr,
+        sizeof(server_addr));
+```
+
+---
+
+`Poin 9 - Command Database`
+
+Client dapat menjalankan command:
+- `HELP`
+- `CREATE DATABASE`
+- `CREATE TABLE`
+- `INSERT`
+- `SELECT`
+- `DELETE`
+- `UPDATE`
+- `LIST DATABASE`
+- `LIST TABLE`
+- `DROP DATABASE`
+
+---
+
+## REVISI
+
+Awalnya filesystem FUSE hanya berhasil melakukan mount biasa tanpa membuat file encrypted pada `encrypted_storage`. File yang dibuat dari dalam Docker container muncul pada `fuse_mount`, namun file `.enc` tidak ikut terbentuk karena callback `create` dan path handling pada `fuse.c` masih salah.
+
+### Before
+
+```c
+static const char *storage_path = "encrypted_storage";
+```
+
+Masalah:
+- path file encrypted tidak konsisten
+- file baru hanya muncul pada `fuse_mount`
+- file `.enc` tidak ikut terbentuk
+
+### After
+
+```c
+static const char *storage_path = "./encrypted_storage";
+```
+
+Perbaikan:
+- path encrypted storage menjadi konsisten
+- callback `create`, `write`, dan `read` dapat mengakses storage dengan benar
+- filesystem berhasil melakukan encrypt dan decrypt file
+
+---
+
+## NOTES
+
+Integrasi antara Docker bind mount dan FUSE mountpoint pada environment WSL mengalami kendala. Walaupun Docker container berhasil membaca filesystem FUSE melalui path `/app/db`, command database dari binary `server` tidak selalu menghasilkan file database pada `encrypted_storage`.
+
+Berdasarkan hasil pengujian:
+- Docker container berhasil berjalan
+- client berhasil terhubung ke server
+- FUSE filesystem berhasil melakukan encrypt/decrypt file manual
+- bind mount Docker berhasil membaca isi mountpoint
+
+Namun persistence database dari binary `server` tidak konsisten menghasilkan file encrypted pada storage. Hal ini diduga berasal dari implementasi internal binary `server` yang tidak sepenuhnya menulis database melalui path bind mount FUSE pada environment WSL.
+
+---
+
+# OUTPUT SOAL 2
+
+`Build Docker Image`
+
+```bash
+sudo docker build -t soal-2-modul-4-sisop .
+```
+
+Output:
+
+Docker image berhasil dibuat dengan nama `soal-2-modul-4-sisop`.
+
+![output docker build](assets/dockerbuild.png)
+
+---
+
+`Menjalankan Docker Container`
+
+```bash
+sudo docker run -d \
+--name db_app \
+-p 9000:9000 \
+-v $(pwd)/fuse_mount:/app/db \
+soal-2-modul-4-sisop
+```
+
+Output:
+
+Container berhasil dijalankan pada background.
+
+![output docker run](assets/dockerrun.png)
+
+---
+
+`Cek Docker Container`
+
+```bash
+sudo docker ps -a
+```
+
+Output:
+
+Container `db_app` berhasil berjalan dengan expose port `9000`.
+
+![output docker ps](assets/dockerps.png)
+
+---
+
+`Menjalankan Filesystem FUSE`
+
+```bash
+./fuse -f fuse_mount
+```
+
+Output:
+
+Filesystem berhasil mounted pada directory `fuse_mount`.
+
+![output fuse](assets/fuse.png)
+
+---
+
+`Test File Decrypt`
+
+```bash
+cat fuse_mount/tests/notes.csv
+```
+
+Output:
+
+author,notes  
+admin,TEST_SUCCESS
+
+![output decrypt](assets/decrypt.png)
+
+---
+
+`Test File Encrypt`
+
+```bash
+echo "TES" > fuse_mount/coba.txt
+```
+
+Output:
+
+File plaintext berhasil muncul pada mountpoint dan file encrypted berhasil dibuat pada storage.
+
+![output encrypt](assets/encrypt.png)
+
+---
+
+`Menjalankan Client`
+
+```bash
+./client
+```
+
+Output:
+
+Connected to DB Server on port 9000
+
+![output client](assets/client.png)
+
+---
+
+`Test Command Database`
+
+```text
+HELP
+CREATE DATABASE testdb
+LIST DATABASE
+```
+
+Output:
+
+Client berhasil mengirim command ke server database.
+
+![output database](assets/database.png)
+
+---
+
+`Struktur Folder Runtime`
+
+```bash
+tree
+```
+
+Output:
+
+.
+├── Dockerfile
+├── client
+├── client.c
+├── encrypted_storage
+│   └── tests
+│       └── notes.csv.enc
+├── fuse
+├── fuse.c
+├── fuse_mount
+└── server
+
+![output tree soal2](assets/tree2.png)
+
+---
+
+## KENDALA
+
+Kendala utama terdapat pada integrasi Docker bind mount dengan FUSE mountpoint pada environment WSL. Docker beberapa kali gagal melakukan bind mount terhadap mountpoint FUSE dengan error:
+
+```text
+error while creating mount source path:
+mkdir ... file exists
+```
+
+Masalah lain terjadi pada callback `create` dan path handling filesystem sehingga file encrypted awalnya tidak ikut terbentuk pada `encrypted_storage`.
+
+Selain itu persistence database dari binary `server` tidak selalu menghasilkan file database pada storage FUSE walaupun command database berhasil dijalankan melalui client-server socket.
