@@ -535,7 +535,7 @@ Output:
 
 Docker image berhasil dibuat dengan nama `soal-2-modul-4-sisop`.
 
-![output docker build](assets/dockerbuild.png)
+![output docker build](assets/dockerrun1.png)
 
 ---
 
@@ -545,7 +545,7 @@ Docker image berhasil dibuat dengan nama `soal-2-modul-4-sisop`.
 sudo docker image
 ```
 
-![output tree soal2](assets/tree2.png)
+![output tree soal2](assets/images.png)
 
 ---
 
@@ -563,7 +563,7 @@ Output:
 
 Container berhasil dijalankan pada background.
 
-![output docker run](assets/dockerrun.png)
+![output docker run](assets/dockerrun2.png)
 
 ---
 
@@ -606,21 +606,17 @@ Output:
 author,notes  
 admin,TEST_SUCCESS
 
-![output decrypt](assets/decrypt.png)
+![output decrypt](assets/cat notes.png)
 
 ---
 
 `Test File Encrypt`
 
-```bash
-echo "TES" > fuse_mount/coba.txt
-```
-
 Output:
 
 File plaintext berhasil muncul pada mountpoint dan file encrypted berhasil dibuat pada storage.
 
-![output encrypt](assets/encrypt.png)
+![output encrypt](assets/echo.png)
 
 ---
 
