@@ -539,6 +539,16 @@ Docker image berhasil dibuat dengan nama `soal-2-modul-4-sisop`.
 
 ---
 
+`Docker images`
+
+```bash
+sudo docker image
+```
+
+![output tree soal2](assets/tree2.png)
+
+---
+
 `Menjalankan Docker Container`
 
 ```bash
@@ -644,29 +654,7 @@ Client berhasil mengirim command ke server database.
 
 ---
 
-`Struktur Folder Runtime`
 
-```bash
-tree
-```
-
-Output:
-
-.
-├── Dockerfile
-├── client
-├── client.c
-├── encrypted_storage
-│   └── tests
-│       └── notes.csv.enc
-├── fuse
-├── fuse.c
-├── fuse_mount
-└── server
-
-![output tree soal2](assets/tree2.png)
-
----
 
 ## KENDALA
 
