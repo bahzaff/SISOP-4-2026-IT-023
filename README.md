@@ -205,7 +205,7 @@ Output:
 7.txt
 tujuan.txt
 
-![output mount](assets/mount.png)
+![output mount](assets/ls-mnt.png)
 
 ---
 
