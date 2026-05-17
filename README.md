@@ -205,7 +205,7 @@ Output:
 7.txt
 tujuan.txt
 
-![output mount](assets/ls-mnt.png)
+![output mount](assets/ls%20mnt.png)
 
 ---
 
@@ -217,7 +217,7 @@ sudo cat mnt/1.txt
 
 Output file identik dengan source `amba_files/1.txt`.
 
-![output passthrough](assets/passthrough.png)
+![output passthrough](assets/cat1.png)
 
 ---
 
@@ -231,7 +231,7 @@ Output:
 
 Tujuan Mas Amba: -7.957382728443728,112.4698688227961,23:59 WIB
 
-![output tujuan](assets/tujuan.png)
+![output tujuan](assets/cat2.png)
 
 ---
 
